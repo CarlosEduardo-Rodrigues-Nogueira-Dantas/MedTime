@@ -37,9 +37,16 @@ export default {
   methods: {
     formatarTelefone(event) {
       let value = event.target.value.replace(/\D/g, "");
-      value = value.substring(0, 11); // Limita a 11 dígitos
-      value = value.replace(/^(\d{2})(\d)/g, "($1) $2");
-      value = value.replace(/(\d{5})(\d)/, "$1-$2");
+      value = value.substring(0, 11);
+      if (value.length > 10) {
+        // Celular com 9 dígitos: (XX) XXXXX-XXXX
+        value = value.replace(/^(\d{2})(\d{5})(\d{4}).*/, "($1) $2-$3");
+      } else if (value.length > 5) {
+        // Fixo com 8 dígitos: (XX) XXXX-XXXX
+        value = value.replace(/^(\d{2})(\d{4})(\d{0,4}).*/, "($1) $2-$3");
+      } else if (value.length > 2) {
+        value = value.replace(/^(\d{2})(\d*)/, "($1) $2");
+      }
       this.$root.userData.contatoEmergencia.telefone = value;
     }
   }

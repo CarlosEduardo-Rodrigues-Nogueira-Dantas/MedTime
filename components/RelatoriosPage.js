@@ -25,11 +25,16 @@ export default {
     <div class="rounded-2xl bg-white p-4 shadow space-y-3">
       <h3 class="font-semibold">Tratamentos Concluídos</h3>
       <ul class="space-y-2">
-        <li v-for="med in ($root.userData ? $root.userData.medsConcluidos : [])" :key="med.id" class="rounded-xl border p-3">
-          <p class="text-sm"><strong>{{ med.nome }}</strong></p>
-          <p class="text-xs text-slate-600">
-            Concluído em: {{ $root.formatDate(med.concluidoEm) }}
-          </p>
+        <li v-for="med in ($root.userData ? $root.userData.medsConcluidos : [])" :key="med.id" class="rounded-xl border p-3 flex justify-between items-center">
+          <div>
+            <p class="text-sm"><strong>{{ med.nome }}</strong></p>
+            <p class="text-xs text-slate-600">
+              Concluído em: {{ $root.formatDate(med.concluidoEm) }}
+            </p>
+          </div>
+          <button @click="$root.reativarTratamento(med.id)" class="rounded-xl bg-sky-600 px-3 py-1.5 text-white text-sm shadow hover:bg-sky-700">
+            Reativar
+          </button>
         </li>
         <li v-if="!$root.userData || !$root.userData.medsConcluidos || !$root.userData.medsConcluidos.length" class="text-sm text-slate-500">
           Nenhum tratamento concluído ainda.

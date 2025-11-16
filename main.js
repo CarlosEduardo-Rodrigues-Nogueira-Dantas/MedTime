@@ -4,19 +4,23 @@ import CriarPerfil from './CriarPerfil.js';
 import HojePage from './components/HojePage.js';
 import RelatoriosPage from './components/RelatoriosPage.js';
 import InstallHelpModal from './components/InstallHelpModal.js';
+import ConfirmacaoModal from './components/ConfirmacaoModal.js';
 import FinalizarTratamentoModal from './components/FinalizarTratamentoModal.js';
 
 // A aba 'contas' foi removida, e 'perfil' será usada para gerenciar o perfil único.
 const tabs = [
-  { key: 'perfil', label: 'Perfil' },
-  { key: 'meds', label: 'Medicamentos' },
   { key: 'hoje', label: 'Hoje' },
+  { key: 'meds', label: 'Medicamentos' },
+  { key: 'perfil', label: 'Perfil' },
   { key: 'relatorios', label: 'Relatórios' }
 ];
 
 const app = Vue.createApp({
   components: {
-    CriarPerfil
+    CriarPerfil,
+    InstallHelpModal,
+    ConfirmacaoModal,
+    FinalizarTratamentoModal
   },
   data() {
     // O modelo de dados agora é um único objeto 'userData' que pode ser nulo se não existir.
@@ -41,11 +45,13 @@ const app = Vue.createApp({
       medicamentoParaExcluir: null,
       medicamentoParaFinalizar: null,
       perfilParaApagar: null,
+      medParaEditar: null,
       showCriarPerfilModal: false,
 
       statusMsg: '',
       errorMsg: '',
 
+      _deferredPrompt: null,
       historyIndex: 0,
       historyStack: ['perfil'],
       transitionName: 'slide-left'
@@ -57,7 +63,7 @@ const app = Vue.createApp({
       if (!this.userData) {
         return null; // Não renderiza nenhum componente de aba se não houver perfil
       }
-      return { perfil: PerfilPage, meds: MedsPage, hoje: HojePage, relatorios: RelatoriosPage, 'install-help': InstallHelpModal, 'finalizar-tratamento': FinalizarTratamentoModal }[this.tab];
+      return { perfil: PerfilPage, meds: MedsPage, hoje: HojePage, relatorios: RelatoriosPage }[this.tab];
     },
     medsHojeOrdenados() {
       if (!this.userData || !this.userData.meds) {
@@ -108,7 +114,6 @@ const app = Vue.createApp({
         nome: perfilData.nome,
         dataNascimento: perfilData.dataNascimento,
         doencasCronicas: perfilData.doencasCronicas,
-        contatoEmergencia: perfilData.contatoEmergencia,
         contatoEmergencia: { nome: perfilData.contatoEmergencia.nome, telefone: perfilData.contatoEmergencia.telefone },
         meds: [],
         rel: [],
@@ -226,6 +231,48 @@ const app = Vue.createApp({
       setTimeout(()=>this.statusMsg='',1600);
     },
 
+    iniciarEdicaoMed(med) {
+      this.medParaEditar = med;
+      // Clona o objeto para o formulário para evitar reatividade direta no objeto original
+      this.form = { ...med };
+      // Converte array de horários de volta para string para o input
+      if (med.horarios) {
+        this.form.horariosStr = med.horarios.join(', ');
+      }
+      this.navigateTo('meds');
+    },
+
+    salvarEdicaoMed() {
+      if (!this.medParaEditar) return;
+
+      let horarios = [];
+      if (this.form.intervaloHoras) {
+        horarios = this.gerarHorariosAutomaticos(
+          this.form.inicio,
+          Number(this.form.intervaloHoras),
+          Number(this.form.duracaoDias)
+        );
+      } else if (this.form.horariosStr) {
+        horarios = this.form.horariosStr.split(',').map(s => s.trim());
+      }
+
+      const index = this.userData.meds.findIndex(m => m.id === this.medParaEditar.id);
+      if (index !== -1) {
+        // Atualiza o medicamento na lista com os dados do formulário
+        this.userData.meds[index] = { ...this.userData.meds[index], ...this.form, horarios };
+      }
+
+      this.statusMsg = 'Medicamento atualizado com sucesso!';
+      setTimeout(() => this.statusMsg = '', 2000);
+
+      this.cancelarEdicaoMed();
+    },
+
+    cancelarEdicaoMed() {
+      this.medParaEditar = null;
+      this.resetForm();
+    },
+
     iniciarFinalizacaoTratamento(medicamento) {
       this.medicamentoParaFinalizar = medicamento;
     },
@@ -252,6 +299,26 @@ const app = Vue.createApp({
 
     cancelarFinalizacaoTratamento() {
       this.medicamentoParaFinalizar = null;
+    },
+
+    reativarTratamento(medId) {
+      if (!this.userData.medsConcluidos) return;
+
+      const medParaReativar = this.userData.medsConcluidos.find(m => m.id === medId);
+
+      if (medParaReativar) {
+        // Remove da lista de concluídos
+        this.userData.medsConcluidos = this.userData.medsConcluidos.filter(m => m.id !== medId);
+
+        // Remove a propriedade de conclusão
+        delete medParaReativar.concluidoEm;
+
+        // Adiciona de volta à lista de medicamentos ativos
+        this.userData.meds.push(medParaReativar);
+
+        this.statusMsg = `Tratamento com ${medParaReativar.nome} foi reativado.`;
+        setTimeout(() => this.statusMsg = '', 2000);
+      }
     },
 
     confirmarExclusao() {
@@ -343,6 +410,20 @@ const app = Vue.createApp({
         this.statusMsg='Permissão de notificação atualizada';
         setTimeout(()=>this.statusMsg='',1400);
       })
+    },
+
+    async instalarApp(deferredPrompt) {
+      const promptToUse = deferredPrompt || this._deferredPrompt;
+      if (!promptToUse) {
+        this.statusMsg = 'Não foi possível iniciar a instalação. Tente manualmente.';
+        setTimeout(() => this.statusMsg = '', 3000);
+        return;
+      }
+      promptToUse.prompt();
+      const { outcome } = await promptToUse.userChoice;
+      if (outcome === 'accepted') {
+        this._deferredPrompt = null;
+      }
     }
   },
 
@@ -374,12 +455,6 @@ const app = Vue.createApp({
     window.addEventListener('beforeinstallprompt', (e)=> {
       e.preventDefault();
       this._deferredPrompt = e;
-      document.getElementById('installBtn').style.display='inline-block';
-      document.getElementById('installBtn').onclick = async ()=> {
-        e.prompt();
-        const choice = await e.userChoice;
-        document.getElementById('installBtn').style.display='none';
-      }
     });
   }
 });

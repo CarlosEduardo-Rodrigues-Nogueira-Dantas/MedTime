@@ -29,7 +29,7 @@ export default {
           </div>
           <div>
             <label for="contatoTelefone" class="block text-sm font-medium text-slate-700">Telefone do Contato (opcional)</label>
-            <input type="tel" id="contatoTelefone" v-model="form.contatoEmergencia.telefone" class="mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:border-sky-500 focus:ring-sky-500 sm:text-sm" placeholder="(11) 98765-4321">
+            <input type="tel" id="contatoTelefone" :value="form.contatoEmergencia.telefone" @input="formatarTelefone" maxlength="15" class="mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:border-sky-500 focus:ring-sky-500 sm:text-sm" placeholder="(11) 98765-4321">
           </div>
         </div>
 
@@ -57,6 +57,18 @@ export default {
   methods: {
     submeter() {
       this.$emit('perfil-criado', { ...this.form });
+    },
+    formatarTelefone(event) {
+      let value = event.target.value.replace(/\D/g, "");
+      value = value.substring(0, 11);
+      if (value.length > 10) {
+        value = value.replace(/^(\d{2})(\d{5})(\d{4}).*/, "($1) $2-$3");
+      } else if (value.length > 5) {
+        value = value.replace(/^(\d{2})(\d{4})(\d{0,4}).*/, "($1) $2-$3");
+      } else if (value.length > 2) {
+        value = value.replace(/^(\d{2})(\d*)/, "($1) $2");
+      }
+      this.form.contatoEmergencia.telefone = value;
     }
   }
 };
