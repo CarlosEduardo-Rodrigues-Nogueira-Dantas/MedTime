@@ -1,0 +1,15 @@
+/* Basic slide transitions (left/right) */
+.slide-left-enter-active, .slide-left-leave-active,
+.slide-right-enter-active, .slide-right-leave-active {
+  transition: transform .28s cubic-bezier(.2,.9,.2,1), opacity .2s ease;
+}
+.slide-left-enter-from { transform: translateX(24px); opacity: 0; }
+.slide-left-leave-to   { transform: translateX(-24px); opacity: 0; }
+.slide-right-enter-from { transform: translateX(-24px); opacity: 0; }
+.slide-right-leave-to   { transform: translateX(24px); opacity: 0; }
+
+/* make the app feel like a card on mobile */
+#app { max-width: 420px; margin-left: auto; margin-right: auto; }
+
+/* small utilities (can expand) */
+button:disabled { opacity: 0.5; pointer-events: none; }

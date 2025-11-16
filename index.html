@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>MedTime – Lembretes de Medicação (PWA)</title>
+  <meta name="theme-color" content="#0ea5e9" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="apple-touch-icon" href="assets/icons/icon-192.png" />
+  <!-- Tailwind via CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Vue 3 via CDN -->
+  <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body class="bg-slate-50 text-slate-900">
+  <div id="app" class="mx-auto max-w-3xl p-4">
+    <header class="flex items-center justify-between mb-6">
+      <h1 class="text-2xl font-bold">💊 MedTime</h1>
+      <div class="flex items-center gap-2">
+        <button @click="$refs.installModal.abrir()" title="Ajuda para instalar" class="rounded-full bg-slate-200 w-8 h-8 flex items-center justify-center text-slate-600 font-bold text-lg hover:bg-slate-300">?</button>
+      </div>
+    </header>
+
+    <section aria-labelledby="sec-status" class="mb-4">
+      <h2 id="sec-status" class="sr-only">Status</h2>
+      <div v-if="statusMsg" class="rounded-xl bg-emerald-50 p-3 text-emerald-800 shadow-sm">{{ statusMsg }}</div>
+      <div v-if="errorMsg" class="rounded-xl bg-rose-50 p-3 text-rose-800 shadow-sm">{{ errorMsg }}</div>
+    </section>
+
+    <!-- Tabs -->
+    <nav v-if="userData" class="mb-6 flex gap-2" role="tablist" aria-label="Seções do aplicativo">
+      <button 
+        v-for="t in tabs" 
+        :key="t.key"
+        :aria-selected="tab===t.key" 
+        role="tab"
+        @click="navigateTo(t.key)"
+        class="rounded-2xl px-4 py-2 shadow-sm"
+        :class="tab===t.key ? 'bg-sky-600 text-white' : 'bg-white text-slate-700 hover:bg-slate-100'">
+        {{ t.label }}
+      </button>
+    </nav>
+    <div v-if="userData" class="min-h-[24rem]">
+      <div>
+        <transition :name="transitionName" mode="out-in">
+          <component :is="currentTabComponent" :key="tab"></component>
+        </transition>
+      </div>
+    </div>
+    <div v-else class="text-center bg-white p-8 rounded-2xl shadow-md">
+      <h2 class="text-2xl font-bold mb-4">Bem-vindo ao MedTime!</h2>
+      <p class="mb-6 text-slate-600">Crie um perfil para começar a gerenciar seus medicamentos.</p>
+      <button @click="abrirModalCriarPerfil" class="w-full max-w-xs mx-auto rounded-xl bg-sky-600 px-4 py-2.5 text-white font-semibold shadow-md hover:bg-sky-700">
+        Criar Perfil
+      </button>
+    </div>
+
+    <div v-if="showCriarPerfilModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <criar-perfil @perfil-criado="onPerfilCriado" @cancelar="fecharModalCriarPerfil"></criar-perfil>
+    </div>
+    
+    <confirmacao-modal
+      :visivel="!!medicamentoParaExcluir"
+      titulo="Excluir Medicamento"
+      :mensagem="`Tem certeza que deseja excluir o medicamento <strong>${medicamentoParaExcluir?.nome || ''}</strong>?`"
+      @confirmar="confirmarExclusao()"
+      @cancelar="medicamentoParaExcluir = null"
+    ></confirmacao-modal>
+
+    <!-- Modal de Confirmação para Apagar Perfil -->
+    <confirmacao-modal
+      :visivel="!!perfilParaApagar"
+      titulo="Apagar Perfil"
+      :mensagem="`Tem certeza que deseja apagar seu perfil e todos os dados associados? Esta ação não pode ser desfeita.`"
+      @confirmar="apagarPerfil"
+      @cancelar="cancelarApagarPerfil"
+    ></confirmacao-modal>
+
+    <!-- Modal de Finalizar Tratamento -->
+    <finalizar-tratamento-modal
+      :visivel="!!medicamentoParaFinalizar"
+      :medicamento="medicamentoParaFinalizar"
+      @cancelar="cancelarFinalizacaoTratamento"
+      @confirmar="confirmarFinalizacaoTratamento"
+    ></finalizar-tratamento-modal>
+
+    <!-- Modal de Ajuda para Instalação -->
+    <install-help-modal ref="installModal" @instalar="instalarApp"></install-help-modal>
+
+    <footer class="mt-10 text-center text-xs text-slate-500">
+      <p>Funciona offline (PWA). Notificações dependem das permissões do navegador.</p>
+    </footer>
+  </div>
+
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('sw.js').catch(()=>{});
+      });
+    }
+  </script>
+  <script type="module" src="main.js"></script>
+</body>
+</html>
