@@ -38,6 +38,7 @@ const app = Vue.createApp({
         estoque:null, 
         limite:null, 
         horariosStr:'',
+        foto: null,
         intervaloHoras: null,
         duracaoDias: null
       },
@@ -69,18 +70,27 @@ const app = Vue.createApp({
       if (!this.userData || !this.userData.meds) {
         return [];
       }
-      return [...this.userData.meds].sort((a, b) => {
-        const aTemHorario = a.horarios && a.horarios.length > 0;
-        const bTemHorario = b.horarios && b.horarios.length > 0;
+      
+      const agora = new Date();
+      const horaAtual = agora.toTimeString().substring(0, 5); // Formato HH:mm
 
-        if (!aTemHorario) return 1; // 'a' sem horário vai para o fim
-        if (!bTemHorario) return -1; // 'b' sem horário vai para o fim
+      return this.userData.meds
+        .map(med => {
+          if (!med.horarios || med.horarios.length === 0) {
+            return null; // Ignora medicamentos sem horários definidos
+          }
+          // Filtra para manter apenas os horários futuros do dia
+          const horariosFuturos = med.horarios.filter(h => h >= horaAtual);
 
-        // Compara pelo primeiro horário (formato 'HH:mm')
-        if (a.horarios[0] < b.horarios[0]) return -1;
-        if (a.horarios[0] > b.horarios[0]) return 1;
-        return 0;
-      });
+          if (horariosFuturos.length === 0) {
+            return null; // Ignora se todos os horários já passaram
+          }
+
+          // Retorna uma cópia do medicamento com os horários filtrados
+          return { ...med, horarios: horariosFuturos };
+        })
+        .filter(med => med !== null) // Remove os nulos
+        .sort((a, b) => a.horarios[0].localeCompare(b.horarios[0])); // Ordena pelo próximo horário
     },
     canGoBack() { return this.historyIndex > 0; },
     canGoForward() { return this.historyIndex < this.historyStack.length - 1; }
@@ -178,7 +188,8 @@ const app = Vue.createApp({
         limite:null, 
         horariosStr:'',
         intervaloHoras:null,
-        duracaoDias:null
+        duracaoDias:null,
+        foto: null
       };
     },
 
@@ -205,6 +216,7 @@ const app = Vue.createApp({
         nome: this.form.nome,
         tipo: this.form.tipo,
         inicio: this.form.inicio,
+        foto: this.form.foto ?? null,
 
         qtdDose: this.form.qtdDose,
         estoque: this.form.estoque ?? null,
@@ -347,6 +359,13 @@ const app = Vue.createApp({
       setTimeout(()=>this.statusMsg='',1200);
     },
 
+    excluirRegistroHistorico(registroId) {
+      if (!this.userData || !this.userData.rel) return;
+      this.userData.rel = this.userData.rel.filter(r => r.id !== registroId);
+      this.statusMsg = 'Registro do histórico removido.';
+      setTimeout(() => this.statusMsg = '', 1500);
+    },
+
     registrarDoseById(medId, hora) {
       const m = this.userData.meds.find(x=>x.id===medId);
       if (m) this.registrarDose(m);
@@ -424,6 +443,47 @@ const app = Vue.createApp({
       if (outcome === 'accepted') {
         this._deferredPrompt = null;
       }
+    },
+
+    // --- Funções de Notificação com Som ---
+
+    setupNotificationScheduler() {
+      // Verifica a cada minuto se há um medicamento no horário atual
+      setInterval(() => {
+        if (!this.userData || !this.userData.meds) return;
+
+        const agora = new Date();
+        const horaAtual = agora.toTimeString().substring(0, 5); // Formato "HH:mm"
+
+        this.userData.meds.forEach(med => {
+          if (med.horarios && med.horarios.includes(horaAtual)) {
+            this.triggerNotification(med);
+          }
+        });
+      }, 60000); // Executa a cada 60 segundos
+    },
+
+    triggerNotification(med) {
+      if (Notification.permission !== 'granted') return;
+
+      const title = `Hora de tomar: ${med.nome}`;
+      const options = {
+        body: `Dose: ${med.qtdDose ?? 1}. Clique para abrir o app.`,
+        icon: med.foto || './assets/icons/icon-192.png',
+        tag: `med-${med.id}` // Agrupa notificações do mesmo medicamento
+      };
+
+      // Dispara a notificação através do Service Worker para melhor compatibilidade
+      navigator.serviceWorker.ready.then(registration => {
+        registration.showNotification(title, options);
+      });
+
+      this.playSound();
+    },
+
+    playSound() {
+      const audio = document.getElementById('notification-sound');
+      audio?.play().catch(e => console.error("Não foi possível tocar o som.", e));
     }
   },
 
@@ -456,6 +516,9 @@ const app = Vue.createApp({
       e.preventDefault();
       this._deferredPrompt = e;
     });
+
+    // Inicia o agendador de notificações
+    this.setupNotificationScheduler();
   }
 });
 

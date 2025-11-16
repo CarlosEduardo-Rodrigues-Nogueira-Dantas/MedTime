@@ -46,28 +46,29 @@ export default {
             :key="m.id + '-' + index"
             class="py-2 flex items-center justify-between"
           >
-            <div>
-
-              <!-- PROTEÇÃO: horários e qtdDose -->
-              <p class="text-sm">
-                <strong>{{ m.nome }}</strong>
-                —
-                {{
-                  m.horarios && m.horarios.length
-                    ? m.horarios.join(', ')
-                    : 'Sem horários'
-                }}
-
-                <span class="text-xs ml-2 text-slate-500">
-                  Dose:
+            <div class="flex items-center gap-4">
+              <img v-if="m.foto" :src="m.foto" :alt="m.nome" class="w-12 h-12 object-cover rounded-lg">
+              <div>
+                <!-- PROTEÇÃO: horários e qtdDose -->
+                <p class="text-sm">
+                  <strong>{{ m.nome }}</strong>
+                  —
                   {{
-                    m.qtdDose !== undefined && m.qtdDose !== null
-                      ? m.qtdDose
-                      : 1
+                    m.horarios && m.horarios.length
+                      ? m.horarios.join(', ')
+                      : 'Sem horários'
                   }}
-                </span>
-              </p>
 
+                  <span class="text-xs ml-2 text-slate-500">
+                    Dose: {{ m.qtdDose ?? 1 }}
+                  </span>
+                </p>
+                
+                <!-- Lembrete de Estoque Baixo -->
+                <div v-if="m.estoque !== null && m.limite !== null && m.estoque <= m.limite" class="text-xs text-amber-600 font-semibold mt-1">
+                  ⚠️ Estoque baixo! (Restam: {{ m.estoque }})
+                </div>
+              </div>
             </div>
 
             <div class="flex gap-2">

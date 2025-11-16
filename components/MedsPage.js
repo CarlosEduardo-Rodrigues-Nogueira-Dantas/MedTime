@@ -28,6 +28,31 @@ export default {
         </label>
       </div>
 
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 border-t pt-4">
+        <label class="block">
+          <span class="text-sm">Dose (unidades)</span>
+          <input type="number" min="1" v-model.number="$root.form.qtdDose" class="mt-1 w-full rounded-xl border p-2" />
+        </label>
+        <label class="block">
+          <span class="text-sm">Estoque atual</span>
+          <input type="number" min="0" v-model.number="$root.form.estoque" class="mt-1 w-full rounded-xl border p-2" placeholder="Opcional" />
+        </label>
+        <label class="block">
+          <span class="text-sm">Avisar se menor que</span>
+          <input type="number" min="1" v-model.number="$root.form.limite" class="mt-1 w-full rounded-xl border p-2" placeholder="Opcional" />
+        </label>
+      </div>
+
+      <!-- Upload de Foto -->
+      <div class="border-t pt-4">
+        <label class="block">
+          <span class="text-sm">Foto do Medicamento (opcional)</span>
+          <input type="file" @change="handleFileUpload" accept="image/*" class="mt-1 w-full text-sm file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-sky-50 file:text-sky-700 hover:file:bg-sky-100">
+        </label>
+        <!-- Preview da Imagem -->
+        <img v-if="$root.form.foto" :src="$root.form.foto" alt="Preview" class="mt-2 w-24 h-24 object-cover rounded-lg shadow-sm">
+      </div>
+
       <!-- Seletor de Modo de Horário -->
       <div class="flex border border-slate-200 rounded-lg p-1 bg-slate-100">
         <button type="button" @click="modoHorario = 'auto'" :class="modoHorario === 'auto' ? 'bg-white shadow' : ''" class="flex-1 rounded-md py-1.5 text-sm font-semibold">Automático</button>
@@ -69,11 +94,14 @@ export default {
       <h3 class="text-lg font-semibold">Seus Medicamentos</h3>
       <ul v-if="$root.userData && $root.userData.meds.length" class="space-y-2">
         <li v-for="med in $root.userData.meds" :key="med.id" class="bg-white p-3 rounded-xl shadow-sm flex justify-between items-center">
-          <div>
-            <p class="font-bold">{{ med.nome }}</p>
-            <p class="text-sm text-slate-600">
-              {{ med.horarios && med.horarios.length ? med.horarios.join(', ') : 'Sem horário fixo' }}
-            </p>
+          <div class="flex items-center gap-4">
+            <img v-if="med.foto" :src="med.foto" :alt="med.nome" class="w-12 h-12 object-cover rounded-lg">
+            <div>
+              <p class="font-bold">{{ med.nome }}</p>
+              <p class="text-sm text-slate-600">
+                {{ med.horarios && med.horarios.length ? med.horarios.join(', ') : 'Sem horário fixo' }}
+              </p>
+            </div>
           </div>
           <div class="flex gap-2">
             <button @click="$root.iniciarEdicaoMed(med)" class="rounded-lg bg-slate-200 px-3 py-1.5 text-sm font-semibold text-slate-700 hover:bg-slate-300">
@@ -106,6 +134,16 @@ export default {
       } else {
         this.$root.addMed();
       }
+    },
+    handleFileUpload(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        this.$root.form.foto = e.target.result; // Salva a imagem como string Base64
+      };
+      reader.readAsDataURL(file);
     }
   },
 };

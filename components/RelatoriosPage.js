@@ -11,9 +11,16 @@ export default {
       </div>
 
       <ul class="space-y-2 max-h-[50vh] overflow-auto">
-        <li v-for="r in ($root.userData ? $root.userData.rel : [])" :key="r.id" class="rounded-xl border p-3">
-          <p class="text-sm"><strong>{{ r.nome }}</strong> — {{ r.tipo==='continuo' ? 'Contínuo' : 'Curto' }}</p>
-          <p class="text-xs text-slate-600">{{ new Date(r.quando).toLocaleString() }} — Dose: {{ r.qtdDose }}</p>
+        <li v-for="r in ($root.userData ? $root.userData.rel : [])" :key="r.id" class="rounded-xl border p-3 flex justify-between items-center">
+          <div>
+            <p class="text-sm"><strong>{{ r.nome }}</strong> — {{ r.tipo==='continuo' ? 'Contínuo' : 'Curto' }}</p>
+            <p class="text-xs text-slate-600">{{ new Date(r.quando).toLocaleString() }} — Dose: {{ r.qtdDose }}</p>
+          </div>
+          <button
+            @click="$root.excluirRegistroHistorico(r.id)"
+            class="rounded-lg bg-red-100 px-3 py-1.5 text-sm font-semibold text-red-700 hover:bg-red-200">
+            Excluir
+          </button>
         </li>
         <li v-if="!$root.userData || !$root.userData.rel.length" class="text-sm text-slate-500">
           Nenhum registro de dose encontrado.
