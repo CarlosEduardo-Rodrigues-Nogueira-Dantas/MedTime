@@ -1,4 +1,9 @@
 export default {
+  data() {
+    return {
+      modoHorario: 'auto' // 'auto' ou 'manual'
+    }
+  },
   template: `
   <section aria-labelledby="meds-title" class="space-y-4">
     <h2 id="meds-title" class="text-xl font-semibold">{{ $root.medParaEditar ? 'Editar Medicamento' : 'Adicionar Medicamento' }}</h2>
@@ -23,9 +28,16 @@ export default {
         </label>
       </div>
 
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <!-- Seletor de Modo de Horário -->
+      <div class="flex border border-slate-200 rounded-lg p-1 bg-slate-100">
+        <button type="button" @click="modoHorario = 'auto'" :class="modoHorario === 'auto' ? 'bg-white shadow' : ''" class="flex-1 rounded-md py-1.5 text-sm font-semibold">Automático</button>
+        <button type="button" @click="modoHorario = 'manual'" :class="modoHorario === 'manual' ? 'bg-white shadow' : ''" class="flex-1 rounded-md py-1.5 text-sm font-semibold">Manual</button>
+      </div>
+
+      <!-- Modo Automático -->
+      <div v-if="modoHorario === 'auto'" class="grid grid-cols-1 md:grid-cols-2 gap-4 border-t pt-4">
         <label class="block">
-          <span class="text-sm">Horário inicial (para cálculo de intervalo)</span>
+          <span class="text-sm">Horário inicial</span>
           <input type="datetime-local" v-model="$root.form.inicio" class="mt-1 w-full rounded-xl border p-2" />
         </label>
         <label class="block">
@@ -34,12 +46,13 @@ export default {
         </label>
       </div>
 
-      <div class="text-center text-sm text-slate-500">OU</div>
-
-      <label class="block">
-        <span class="text-sm">Horários fixos (separados por vírgula)</span>
-        <input v-model.trim="$root.form.horariosStr" class="mt-1 w-full rounded-xl border p-2" placeholder="Ex: 08:00, 16:00, 22:00" />
-      </label>
+      <!-- Modo Manual -->
+      <div v-if="modoHorario === 'manual'" class="border-t pt-4">
+        <label class="block">
+          <span class="text-sm">Horários fixos (separados por vírgula)</span>
+          <input v-model.trim="$root.form.horariosStr" class="mt-1 w-full rounded-xl border p-2" placeholder="Ex: 08:00, 16:00, 22:00" />
+        </label>
+      </div>
 
       <div class="flex gap-4">
         <button type="submit" class="w-full rounded-xl bg-sky-600 px-4 py-2 text-white shadow hover:bg-sky-700">
@@ -80,11 +93,19 @@ export default {
   `,
   methods: {
     salvar() {
+      // Limpa o modo não selecionado para evitar dados conflitantes
+      if (this.modoHorario === 'auto') {
+        this.$root.form.horariosStr = '';
+      } else {
+        this.$root.form.inicio = '';
+        this.$root.form.intervaloHoras = null;
+      }
+
       if (this.$root.medParaEditar) {
         this.$root.salvarEdicaoMed();
       } else {
         this.$root.addMed();
       }
     }
-  }
+  },
 };
