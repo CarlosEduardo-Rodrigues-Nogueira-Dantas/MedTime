@@ -1,6 +1,6 @@
 import PerfilPage from './components/PerfilPage.js';
 import MedsPage from './components/MedsPage.js';
-import CriarPerfil from './CriarPerfil.js';
+import CriarPerfil from './components/CriarPerfil.js';
 import HojePage from './components/HojePage.js';
 import RelatoriosPage from './components/RelatoriosPage.js';
 import InstallHelpModal from './components/InstallHelpModal.js';
@@ -71,26 +71,38 @@ const app = Vue.createApp({
         return [];
       }
       
-      const agora = new Date();
-      const horaAtual = agora.toTimeString().substring(0, 5); // Formato HH:mm
+      const hoje = new Date();
+      hoje.setHours(0, 0, 0, 0); // Zera o horário para comparar apenas a data
 
       return this.userData.meds
         .map(med => {
+           // Se for de curto prazo, verifica se hoje está dentro do período do tratamento
+          if (med.tipo === 'curto' && med.inicio && med.duracaoDias) {
+            const dataInicio = new Date(med.inicio);
+            dataInicio.setHours(0, 0, 0, 0);
+            
+            const dataFim = new Date(dataInicio);
+            dataFim.setDate(dataFim.getDate() + med.duracaoDias);
+            
+            if (hoje < dataInicio || hoje >= dataFim) {
+              return null; // Fora do período de tratamento
+            }
+          }
+
+          // Se não tiver horários, não mostra na lista de hoje
           if (!med.horarios || med.horarios.length === 0) {
-            return null; // Ignora medicamentos sem horários definidos
-          }
-          // Filtra para manter apenas os horários futuros do dia
-          const horariosFuturos = med.horarios.filter(h => h >= horaAtual);
-
-          if (horariosFuturos.length === 0) {
-            return null; // Ignora se todos os horários já passaram
+            return null;
           }
 
-          // Retorna uma cópia do medicamento com os horários filtrados
-          return { ...med, horarios: horariosFuturos };
+          // Para medicamentos de uso contínuo ou de curto prazo dentro do período,
+          // eles são válidos para hoje. Retorna o medicamento com seus horários.
+          return med;
         })
         .filter(med => med !== null) // Remove os nulos
-        .sort((a, b) => a.horarios[0].localeCompare(b.horarios[0])); // Ordena pelo próximo horário
+        .sort((a, b) => {
+          // Ordena pelo primeiro horário do dia
+          return (a.horarios[0] || '23:59').localeCompare(b.horarios[0] || '23:59');
+        });
     },
     canGoBack() { return this.historyIndex > 0; },
     canGoForward() { return this.historyIndex < this.historyStack.length - 1; }
@@ -167,7 +179,7 @@ const app = Vue.createApp({
       const totalHoras = (duracaoDias ? duracaoDias : 1) * 24;
       const limite = new Date(inicio.getTime() + totalHoras * 60 * 60 * 1000);
 
-      while (inicio <= limite) {
+      while (inicio < limite) {
         horarios.push(inicio.toTimeString().substring(0,5));
         inicio = new Date(inicio.getTime() + intervaloHoras * 60 * 60 * 1000);
       }

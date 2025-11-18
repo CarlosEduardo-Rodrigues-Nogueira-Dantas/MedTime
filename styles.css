@@ -10,6 +10,3 @@
 
 /* make the app feel like a card on mobile */
 #app { max-width: 420px; margin-left: auto; margin-right: auto; }
-
-/* small utilities (can expand) */
-button:disabled { opacity: 0.5; pointer-events: none; }
